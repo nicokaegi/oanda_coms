@@ -79,6 +79,18 @@ pub mod oanda_coms_lib{
              json::parse(&body).unwrap()
         }
 
+        async fn make_put_request(&self, url : String, auth_header : String, body : String) -> JsonValue{
+
+            let res = self.client.put(url)
+                                 .header("Content-Type", "application/json")
+                                 .header("Authorization", auth_header)
+                                 .body(body)
+                                 .send().await.unwrap();
+
+             let body = res.text().await.unwrap();
+             json::parse(&body).unwrap()
+        }
+
         pub fn set_key(&mut self, key : String) -> (){
 
             self.key = key;
@@ -112,7 +124,7 @@ pub mod oanda_coms_lib{
             let mut output;
 
             let mut remaning = count;
-            let mut candles : Vec::<Candle> = Vec::with_capacity(count.as_usize());
+            let mut candles : Vec::<Candle> = Vec::with_capacity(remaning as usize);
             let mut temp_candles : Vec::<Candle>;
             let mut current_time = (chrono::offset::Local::now() - Duration::minutes(5)).timestamp();
             //println!("{}", current_time.timestamp());
@@ -144,19 +156,17 @@ pub mod oanda_coms_lib{
 
         }
 
-        pub fn get_open_trades(&self) -> (){
+        pub fn get_open_trades(&self) -> JsonValue{
 
             let url = format!("https://api-fxpractice.oanda.com/v3/accounts/{}/openTrades", self.account);
             let auth_header = format!("Bearer {}", self.key);
             let mut output = self.async_runtime.block_on(self.make_get_request(url, auth_header));
 
-            println!("{:#}", output);
-
-            ()
+            output
 
         }
 
-        pub fn post_order(&self, instrument : &str, units : i32 , order_type : &str) -> (){
+        pub fn post_order(&self, instrument : &str, units : i32 , order_type : &str) -> JsonValue {
 
             let url = format!("https://api-fxpractice.oanda.com/v3/accounts/{}/orders", self.account);
             let auth_header = format!("Bearer {}", self.key);
@@ -174,11 +184,22 @@ pub mod oanda_coms_lib{
 
             let mut output = self.async_runtime.block_on(self.make_post_request(url, auth_header, order.to_string()));
 
-            println!("{:#}", output);
-            //let candles : &JsonValue = &output.remove("candles");
-            //let candles : Vec::<Candle> = unpack_candles(candles);
+            output
 
-            ()
+        }
+
+        pub fn remove_order(&self, units : i32, trade_id : i32) -> JsonValue {
+
+            let url = format!("https://api-fxpractice.oanda.com/v3/accounts/{}/trades/{}/close", self.account, trade_id);
+            let auth_header = format!("Bearer {}", self.key);
+
+            let transaction : JsonValue = object!{
+                "units" => units.to_string()
+            };
+
+            let mut output = self.async_runtime.block_on(self.make_put_request(url, auth_header, transaction.to_string()));
+
+            output
 
         }
     }

@@ -20,11 +20,14 @@ fn oanda_coms_lib(_py : Python, m: &PyModule) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(get_instrument_candles, m)?)?;
     m.add_function(wrap_pyfunction!(get_instrument_candle_range, m)?)?;
+    m.add_function(wrap_pyfunction!(get_open_trades, m)?)?;
+    m.add_function(wrap_pyfunction!(post_order, m)?)?;
+    m.add_function(wrap_pyfunction!(remove_order, m)?)?;
 
     Ok(())
 }
 
-fn pack_into_map( candles : Vec<Candle> ) -> HashMap<String,Vec<String>>{
+fn pack_candles_into_map( candles : Vec<Candle> ) -> HashMap<String,Vec<String>>{
 
     let mut output_map = HashMap::<String,Vec<String>>::new();
 
@@ -61,12 +64,62 @@ fn pack_into_map( candles : Vec<Candle> ) -> HashMap<String,Vec<String>>{
 fn get_instrument_candles(instrument : &str, count : i32 ,granularity : &str) -> PyResult<HashMap<String,Vec<String>>> {
 
     let candles = client.get_instrument_candles( instrument, count, granularity);
-    Ok(pack_into_map(candles))
+
+    Ok(pack_candles_into_map(candles))
 }
 
 #[pyfunction]
 fn get_instrument_candle_range(instrument : &str, from : &str, to : &str, granularity : &str) -> PyResult<HashMap<String,Vec<String>>> {
 
     let candles = client.get_instrument_candle_range( instrument, from, to, granularity);
-    Ok(pack_into_map(candles))
+    Ok(pack_candles_into_map(candles))
+}
+
+#[pyfunction]
+fn get_open_trades() -> PyResult<HashMap<String,HashMap<String,String>>> {
+
+    let mut open_trades = &mut client.get_open_trades()["trades"];
+
+    let mut output_trades = HashMap::<String,HashMap<String,String>>::new();
+    let mut single_trade : HashMap<String,String>;
+
+    for trade in open_trades.members() {
+        single_trade = HashMap::new();
+        for item in trade.entries(){
+            single_trade.insert(item.0.to_string(), item.1.to_string());
+        }
+        output_trades.insert(trade["id"].to_string(), single_trade);
+    }
+
+    Ok(output_trades)
+}
+
+
+#[pyfunction]
+fn post_order(instrument : &str, units : i32 , order_type : &str) -> PyResult<String> {
+
+    let transaction_id = client.post_order( instrument, units, order_type)["orderCreateTransaction"]["id"].to_string();
+
+    Ok(transaction_id)
+}
+
+#[pyfunction]
+fn remove_order(units : i32 , trade_id : i32) -> PyResult<HashMap<String,String>> {
+
+    let transaction_id = client.remove_order(units, trade_id);
+
+    let mut output_dict : HashMap<String,String> = HashMap::<String,String>::new();
+
+    if(!transaction_id["orderCancelTransaction"].is_null()){
+
+        output_dict.insert("orderCancelTransaction".to_string(), transaction_id["orderCancelTransaction"]["reason"].to_string());
+
+    } else{
+
+        output_dict.insert("orderCreateTransaction".to_string(), transaction_id["orderCreateTransaction"]["id"].to_string());
+
+    }
+
+
+    Ok(output_dict)
 }
