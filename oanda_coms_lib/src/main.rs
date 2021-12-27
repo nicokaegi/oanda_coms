@@ -14,7 +14,7 @@ fn main() {
 
     //println!("{}", client.post_order("EUR_USD",100,"MARKET")["orderCreateTransaction"]["id"]);
 
-    let mut thingy = client.remove_order(100, 13);
+    let mut thingy = client.get_open_trades();
     println!("{}", thingy);
     //println!("{}", thingy[0]);
     //println!("{}", thingy[0]);
