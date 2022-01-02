@@ -1,7 +1,7 @@
 import oanda_coms_lib as ocl
 import datetime
 import time
-
+import traceback
 # intial trade cleanup
 
 open_trades = ocl.get_open_trades()
@@ -24,7 +24,13 @@ while True:
 
     if (curr_minute % time_mod) ==  0:
         if open_trade_id != None:
-            print(ocl.remove_order(int(open_trade_id), int(open_trade_id)), datetime.datetime.now())
-        open_trade_id = ocl.post_order("EUR_USD", 100, "MARKET")
+            try:
+                print("sell", ocl.remove_order(int(last_transaction['units']), int(last_transaction['id'])), datetime.datetime.now())
+
+            except:
+                traceback.print_exc()
+
+        last_transaction = ocl.post_order("EUR_USD", 100, "MARKET")
+        print("buy",last_transaction)
 
     time.sleep(60)

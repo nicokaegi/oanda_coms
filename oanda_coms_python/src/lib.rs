@@ -7,6 +7,9 @@ use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 
+use pyo3::exceptions::PyException;
+
+
 lazy_static!{
     static ref client : OandaClient = {
         let account : String = env::var("ACCOUNT").unwrap();
@@ -96,30 +99,51 @@ fn get_open_trades() -> PyResult<HashMap<String,HashMap<String,String>>> {
 
 
 #[pyfunction]
-fn post_order(instrument : &str, units : i32 , order_type : &str) -> PyResult<String> {
+fn post_order(instrument : &str, units : i32 , order_type : &str) -> PyResult<HashMap<String,String>> {
 
-    let transaction_id = client.post_order( instrument, units, order_type)["orderCreateTransaction"]["id"].to_string();
+    let mut output_dict : HashMap<String, String> = HashMap::<String,String>::new();
 
-    Ok(transaction_id)
+    let transaction = client.post_order( instrument, units, order_type);
+
+    if(transaction["orderFillTransaction"].is_null()){
+
+        println!("{}", transaction);
+        Err(PyException::new_err("in order creation"))
+
+    } else{
+
+        output_dict.insert("id".to_string(), transaction["orderFillTransaction"]["id"].to_string());
+        output_dict.insert("instrument".to_string(), transaction["orderFillTransaction"]["instrument"].to_string());
+        output_dict.insert("units".to_string(), transaction["orderFillTransaction"]["units"].to_string());
+        output_dict.insert("price".to_string(), transaction["orderFillTransaction"]["price"].to_string());
+
+        Ok(output_dict)
+
+    }
 }
 
 #[pyfunction]
 fn remove_order(units : i32 , trade_id : i32) -> PyResult<HashMap<String,String>> {
 
-    let transaction_id = client.remove_order(units, trade_id);
+    let transaction = client.remove_order(units, trade_id);
 
     let mut output_dict : HashMap<String,String> = HashMap::<String,String>::new();
 
-    if(!transaction_id["orderCancelTransaction"].is_null()){
+    if(transaction["orderCreateTransaction"].is_null()){
 
-        output_dict.insert("orderCancelTransaction".to_string(), transaction_id["orderCancelTransaction"]["reason"].to_string());
+        println!("{}", transaction);
+        Err(PyException::new_err("in order removal"))
 
     } else{
 
-        output_dict.insert("orderCreateTransaction".to_string(), transaction_id["orderCreateTransaction"]["id"].to_string());
+        output_dict.insert("id".to_string(), transaction["orderCreateTransaction"]["id"].to_string());
+        output_dict.insert("instrument".to_string(), transaction["orderCreateTransaction"]["instrument"].to_string());
+        output_dict.insert("units".to_string(), transaction["orderCreateTransaction"]["units"].to_string());
+        output_dict.insert("price".to_string(), transaction["orderCreateTransaction"]["price"].to_string());
 
+
+        Ok(output_dict)
     }
 
 
-    Ok(output_dict)
 }
