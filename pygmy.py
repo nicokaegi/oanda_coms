@@ -2,6 +2,15 @@ import oanda_coms_lib as ocl
 import datetime
 import time
 import traceback
+
+''' 
+
+yet another test script but this time for a basic trading bot in python
+
+all is does is but and sell orders in regular intervels. 
+
+''' 
+
 # intial trade cleanup
 
 open_trades = ocl.get_open_trades()
