@@ -4,6 +4,12 @@ use std::collections::HashMap;
 
 fn main() {
 
+    /*
+
+        Feel free to ignore this file. I just used it to test to quickly test and prototype things before they went into the main library
+
+    */ 
+
     let key : String = env::var("KEY").unwrap();
     let account : String = env::var("ACCOUNT").unwrap();
 
